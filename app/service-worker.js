@@ -1,22 +1,17 @@
-/* Offline-first service worker for the English Study App PWA.
-   Precaches the app shell so it launches without a network connection.
-   Bump CACHE_VERSION whenever the shell files change to invalidate old caches. */
-const CACHE_VERSION = 'eng-study-v3';
-const SHELL = [
-  './',
-  './index.html',
-  './styles.css',
-  './app.js',
-  './manifest.webmanifest',
+const CACHE_VERSION = 'eng-study-v4';
+const SHELL_STATIC = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon-180.png'
 ];
 
+// Files that should always be fresh from network
+const NETWORK_FIRST = ['app.js', 'styles.css', 'index.html', 'manifest.webmanifest'];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL_STATIC)).then(() => self.skipWaiting())
   );
 });
 
@@ -34,25 +29,39 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // Never cache the Anthropic API (translation) — always go to network.
+  // Never cache the Anthropic API
   if (url.hostname === 'api.anthropic.com') return;
 
-  // App-shell / same-origin: cache-first, fall back to network and cache it.
   if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
+    const filename = url.pathname.split('/').pop() || 'index.html';
+    const isNetworkFirst = NETWORK_FIRST.some((f) => filename === f || url.pathname.endsWith('/' + f) || url.pathname === url.pathname.replace(/[^/]*$/, '') );
+
+    if (NETWORK_FIRST.some((f) => url.pathname.endsWith(f) || url.pathname.endsWith('/'))) {
+      // Network-first: always try network, fall back to cache
+      event.respondWith(
+        fetch(req).then((res) => {
           const copy = res.clone();
           caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy)).catch(() => {});
           return res;
-        }).catch(() => caches.match('./index.html'));
-      })
-    );
+        }).catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html')))
+      );
+    } else {
+      // Cache-first for static assets (icons etc.)
+      event.respondWith(
+        caches.match(req).then((cached) => {
+          if (cached) return cached;
+          return fetch(req).then((res) => {
+            const copy = res.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy)).catch(() => {});
+            return res;
+          }).catch(() => caches.match('./index.html'));
+        })
+      );
+    }
     return;
   }
 
-  // Cross-origin (e.g. Google Fonts): stale-while-revalidate.
+  // Cross-origin (e.g. Google Fonts): stale-while-revalidate
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req).then((res) => {
