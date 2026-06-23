@@ -20,6 +20,7 @@
     data: {},
     today: '',
     showInput: false,
+    editMode: false,
     showStudy: false,
     showSettings: false,
     koreanText: '',
@@ -172,8 +173,10 @@
       setState({ inputError: '모든 영어 번역을 입력해주세요.' });
       return;
     }
+    var existing = (state.data[state.today] && state.data[state.today].sentences) || [];
     var sentences = tp.map(function (p, i) {
-      return { id: i, korean: p.korean, english: p.english, completed: false };
+      var prev = existing.filter(function (s) { return s.korean === p.korean; })[0];
+      return { id: i, korean: p.korean, english: p.english, completed: prev ? prev.completed : false };
     });
     var newData = Object.assign({}, state.data);
     newData[state.today] = { date: state.today, sentences: sentences };
@@ -182,7 +185,13 @@
     state.showInput = false;
     state.koreanText = '';
     state.translatedPairs = null;
-    startStudy(sentences, state.today, '오늘의 학습');
+    var wasEdit = state.editMode;
+    state.editMode = false;
+    if (wasEdit) {
+      showToast('✅ 문장이 수정되었습니다');
+    } else {
+      startStudy(sentences, state.today, '오늘의 학습');
+    }
   }
 
   /* ───────────────────────── Study session ─────────────────────── */
@@ -445,8 +454,14 @@
       setState({ showSettings: false });
       showToast(val ? '🔑 API 키를 저장했습니다' : '키를 삭제했습니다 (수동 입력 모드)');
     },
-    openInput: function () { setState({ showInput: true, koreanText: '', translatedPairs: null, inputError: '' }); },
-    closeInput: function () { syncPairsFromDom(); setState({ showInput: false }); },
+    openInput: function () { setState({ showInput: true, editMode: false, koreanText: '', translatedPairs: null, inputError: '' }); },
+    openEdit: function () {
+      var td = state.data[state.today];
+      if (!td || !td.sentences) return;
+      var pairs = td.sentences.map(function (s) { return { korean: s.korean, english: s.english }; });
+      setState({ showInput: true, editMode: true, koreanText: pairs.map(function (p) { return p.korean; }).join('\n'), translatedPairs: pairs, inputError: '' });
+    },
+    closeInput: function () { syncPairsFromDom(); setState({ showInput: false, editMode: false }); },
     doTranslate: function () { translate(); },
     resetInput: function () { setState({ translatedPairs: null, inputError: '' }); },
     doSave: function () { saveSentencesAndStudy(); },
@@ -586,7 +601,10 @@
         '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">' +
         '<div><div style="font-size:16px; font-weight:800; color:#1E1B4B;">오늘의 문장</div>' +
         '<div style="font-size:12px; color:#6B7280; margin-top:3px;">' + v.todayDone + ' / ' + v.todayTotal + '개 완료</div></div>' +
+        '<div style="display:flex; gap:8px;">' +
+        '<button data-action="openEdit" style="background:#F3F4F6; color:#374151; border:none; padding:10px 14px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer;">편집</button>' +
         '<button data-action="studyToday" style="background:#4F46E5; color:white; border:none; padding:10px 18px; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer;">학습 시작</button>' +
+        '</div>' +
         '</div>' +
         '<div style="background:#F3F4F6; border-radius:6px; height:6px; overflow:hidden; margin-bottom:16px;">' +
         '<div style="background:#10B981; height:100%; width:' + v.todayPct + '%; border-radius:6px; transition:width 0.5s;"></div></div>' +
@@ -794,7 +812,9 @@
       if (state.inputError) {
         h += '<div style="color:#EF4444; font-size:12px; margin-bottom:10px; padding:8px 12px; background:#FEF2F2; border-radius:8px;">' + esc(state.inputError) + '</div>';
       }
-      h += '<button data-action="doSave" style="background:#10B981; color:white; border:none; padding:16px; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer; width:100%; margin-top:4px;">저장하고 학습 시작 →</button>';
+      var saveTxt = state.editMode ? '✅ 수정 완료' : '저장하고 학습 시작 →';
+      var saveBg = state.editMode ? '#6366F1' : '#10B981';
+      h += '<button data-action="doSave" style="background:' + saveBg + '; color:white; border:none; padding:16px; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer; width:100%; margin-top:4px;">' + saveTxt + '</button>';
       h += '</div>';
     }
 
