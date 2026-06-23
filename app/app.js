@@ -10,7 +10,7 @@
 
   var LS_DATA = 'eng_learn_v1';
   var LS_KEY = 'anthropic_api_key';
-  var TRANSLATE_MODEL = 'claude-haiku-4-5-20251001';
+  var TRANSLATE_MODEL = 'claude-sonnet-4-6';
 
   var root = document.getElementById('app');
 
@@ -42,6 +42,22 @@
   };
 
   var toastTimer = null;
+  var cachedVoices = [];
+
+  function pickVoice(lang) {
+    var voices = cachedVoices.length ? cachedVoices : (window.speechSynthesis ? window.speechSynthesis.getVoices() || [] : []);
+    var langLow = lang.toLowerCase();
+    var code = lang.slice(0, 2).toLowerCase();
+    var exact = voices.filter(function (v) { return v.lang && v.lang.toLowerCase() === langLow; });
+    var loose = voices.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf(code) === 0; });
+    var pool = exact.length ? exact : loose;
+    if (!pool.length) return null;
+    var quality = ['enhanced', 'premium', 'neural', 'natural', 'wavenet', 'google'];
+    var best = pool.filter(function (v) {
+      return quality.some(function (k) { return v.name.toLowerCase().indexOf(k) >= 0; });
+    });
+    return (best[0] || pool[0]) || null;
+  }
 
   function setState(patch) {
     var next = typeof patch === 'function' ? patch(state) : patch;
@@ -107,7 +123,11 @@
     }
 
     try {
-      var prompt = 'Translate the following Korean sentences into natural English expressions.\n' +
+      var prompt = 'Translate the following Korean sentences into natural, conversational English.\n' +
+        'Rules:\n' +
+        '- Use everyday spoken English, not formal or textbook style\n' +
+        '- Keep the tone and nuance of the original\n' +
+        '- Short Korean sentences should become short English sentences\n' +
         'Respond ONLY with a JSON array, no other text: [{"korean":"...","english":"..."}]\n\n' +
         lines.map(function (l, i) { return (i + 1) + '. ' + l; }).join('\n');
 
@@ -213,16 +233,9 @@
       if (!window.speechSynthesis) { resolve(); return; }
       var u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
-      u.rate = 0.85;
+      u.rate = lang.indexOf('ko') === 0 ? 0.78 : 0.88;
       u.pitch = 1;
-      // Prefer a voice that matches the language when available.
-      try {
-        var voices = window.speechSynthesis.getVoices() || [];
-        var match = voices.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf(lang.slice(0, 2)) === 0; });
-        var exact = voices.filter(function (v) { return v.lang && v.lang.toLowerCase() === lang.toLowerCase(); });
-        if (exact[0]) u.voice = exact[0];
-        else if (match[0]) u.voice = match[0];
-      } catch (e) {}
+      try { var v = pickVoice(lang); if (v) u.voice = v; } catch (e) {}
       u.onend = resolve;
       u.onerror = resolve;
       window.speechSynthesis.speak(u);
@@ -982,10 +995,12 @@
       setTimeout(function () { showToast('📚 토요일 주간 복습의 날입니다!'); }, 700);
     }
 
-    // Some browsers populate voices asynchronously; trigger a load.
+    // Pre-load voices; browsers populate them asynchronously.
     if (window.speechSynthesis && typeof window.speechSynthesis.getVoices === 'function') {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = function () { window.speechSynthesis.getVoices(); };
+      cachedVoices = window.speechSynthesis.getVoices() || [];
+      window.speechSynthesis.onvoiceschanged = function () {
+        cachedVoices = window.speechSynthesis.getVoices() || [];
+      };
     }
   }
 
