@@ -23,3 +23,6 @@ body {
 
 /* Inputs inherit the app font */
 textarea, input, button { font-family: inherit; }
+
+/* Prevent Korean words from breaking mid-syllable */
+textarea, p, span, div { word-break: keep-all; overflow-wrap: break-word; }
