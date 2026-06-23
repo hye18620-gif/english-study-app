@@ -10,7 +10,7 @@
 
   var LS_DATA = 'eng_learn_v1';
   var LS_KEY = 'anthropic_api_key';
-  var TRANSLATE_MODEL = 'claude-sonnet-4-6';
+  var TRANSLATE_MODEL = 'claude-haiku-4-5-20251001';
 
   var root = document.getElementById('app');
 
