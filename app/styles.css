@@ -1,0 +1,25 @@
+/* Base reset + keyframes — ported from the design prototype.
+   Most component styling is applied inline in app.js to stay pixel-perfect. */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans KR', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  background: #EEF2FF;
+  overscroll-behavior: none;
+  color: #1F2937;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::-webkit-scrollbar { display: none; }
+
+#app { min-height: 100vh; min-height: 100dvh; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { transform: scaleY(1); opacity: 1; } 50% { transform: scaleY(0.4); opacity: 0.6; } }
+
+/* Inputs inherit the app font */
+textarea, input, button { font-family: inherit; }

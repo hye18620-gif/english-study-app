@@ -1,0 +1,41 @@
+# 'app/' 폴더(설치형 PWA)를 GitHub Pages로 자동 배포합니다.
+# 저장소 Settings → Pages → Source 를 "GitHub Actions" 로 설정하세요.
+# main 브랜치에 푸시될 때마다 자동 배포되고, 수동 실행(Run workflow)도 가능합니다.
+name: Deploy PWA to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시에 한 번만 배포 (진행 중인 이전 배포는 취소)
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload app/ as the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
