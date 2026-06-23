@@ -756,7 +756,7 @@
 
   function inputOverlay() {
     var hasTranslated = state.translatedPairs !== null;
-    var h = '<div style="position:fixed; inset:0; max-width:430px; left:50%; transform:translateX(-50%); background:#F5F3FF; z-index:50; display:flex; flex-direction:column; animation:fadeUp 0.2s ease;">';
+    var h = '<div style="position:fixed; top:0; bottom:0; width:100%; max-width:430px; left:50%; transform:translateX(-50%); background:#F5F3FF; z-index:50; display:flex; flex-direction:column; animation:fadeUp 0.2s ease;">';
     h += '<div style="background:white; padding:14px 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #E5E7EB; flex-shrink:0;">' +
       '<button data-action="closeInput" style="width:36px; height:36px; border-radius:10px; background:#F3F4F6; border:none; font-size:18px; cursor:pointer; color:#374151; display:flex; align-items:center; justify-content:center;">✕</button>' +
       '<div style="font-size:17px; font-weight:800; color:#1E1B4B;">오늘의 문장 입력</div>' +
@@ -811,7 +811,7 @@
     var korFontSize = korLen > 20 ? 20 : korLen > 12 ? 22 : 26;
     var showRevealBtn = !state.autoPlaying && !state.showEnglish && !!curS.korean;
 
-    var h = '<div style="position:fixed; inset:0; max-width:430px; left:50%; transform:translateX(-50%); background:#0F172A; z-index:50; display:flex; flex-direction:column; animation:fadeUp 0.2s ease;">';
+    var h = '<div style="position:fixed; top:0; bottom:0; width:100%; max-width:430px; left:50%; transform:translateX(-50%); background:#0F172A; z-index:50; display:flex; flex-direction:column; animation:fadeUp 0.2s ease;">';
 
     // header
     h += '<div style="padding:16px 20px 10px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">' +
@@ -879,7 +879,7 @@
   function settingsOverlay() {
     var hasKey = false;
     try { hasKey = !!(localStorage.getItem(LS_KEY) || ''); } catch (e) {}
-    var h = '<div style="position:fixed; inset:0; max-width:430px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.45); z-index:60; display:flex; align-items:flex-end; animation:fadeUp 0.2s ease;">';
+    var h = '<div style="position:fixed; top:0; bottom:0; width:100%; max-width:430px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.45); z-index:60; display:flex; align-items:flex-end; animation:fadeUp 0.2s ease;">';
     h += '<div style="background:#F5F3FF; width:100%; border-radius:22px 22px 0 0; padding:20px 18px calc(24px + env(safe-area-inset-bottom,0px)); box-shadow:0 -8px 30px rgba(0,0,0,0.25);">';
     h += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">' +
       '<div style="font-size:17px; font-weight:800; color:#1E1B4B;">설정</div>' +
