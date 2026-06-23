@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; font-family: 'Noto Sans KR', sans-serif; background: #EEF2FF; overscroll-behavior: none; }
+::-webkit-scrollbar { display: none; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+@keyframes pulse { 0%,100% { transform:scaleY(1); opacity:1 } 50% { transform:scaleY(0.4); opacity:0.6 } }
+</style>
+</helmet>
+
+<div style="max-width:430px; margin:0 auto; min-height:100vh; background:#EEF2FF; display:flex; flex-direction:column; position:relative;">
+
+  <!-- HEADER -->
+  <div style="background:white; padding:16px 20px 12px; box-shadow:0 1px 0 #E5E7EB; position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between;">
+    <div>
+      <div style="font-size:11px; color:#9CA3AF; font-weight:500; letter-spacing:0.02em;">{{ todayFmt }}</div>
+      <div style="font-size:22px; font-weight:900; color:#1E1B4B; margin-top:1px; letter-spacing:-0.5px;">영어 학습</div>
+    </div>
+    <sc-if value="{{ isSat }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FEF3C7; color:#D97706; padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700;">📅 주간복습</div>
+    </sc-if>
+    <sc-if value="{{ isLastSun }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FCE7F3; color:#DB2777; padding:6px 12px; border-radius:16px; font-size:12px; font-weight:700;">📊 월간복습</div>
+    </sc-if>
+    <sc-if value="{{ isNormal }}" hint-placeholder-val="{{ false }}">
+      <div style="width:36px; height:36px;"></div>
+    </sc-if>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div style="flex:1; overflow-y:auto; padding-bottom:82px;">
+
+    <!-- TODAY TAB -->
+    <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:16px; display:flex; flex-direction:column; gap:14px;">
+
+        <!-- Prev incomplete alert -->
+        <sc-if value="{{ hasPrevIncomplete }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:14px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div>
+              <div style="font-size:13px; font-weight:700; color:#92400E;">⚠️ 미완료 문장</div>
+              <div style="font-size:12px; color:#B45309; margin-top:2px;">{{ prevIncomplete }}개 문장이 완료되지 않았어요</div>
+            </div>
+            <button onClick="{{ reviewPrev }}" style="background:#F59E0B; color:white; border:none; padding:9px 14px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0;">복습하기</button>
+          </div>
+        </sc-if>
+
+        <!-- Saturday weekly review card -->
+        <sc-if value="{{ isSat }}" hint-placeholder-val="{{ false }}">
+          <div style="background:linear-gradient(135deg,#667EEA 0%,#764BA2 100%); border-radius:18px; padding:22px; color:white;">
+            <div style="font-size:18px; font-weight:800; margin-bottom:6px;">📚 주간 복습의 날</div>
+            <div style="font-size:13px; opacity:0.88; line-height:1.6; margin-bottom:18px;">이번 주 학습한 모든 문장을 복습하세요<br>토요일에는 새 문장을 입력하지 않아요</div>
+            <button onClick="{{ reviewWeekly }}" style="background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.4); color:white; padding:13px; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; width:100%;">주간 복습 시작하기 →</button>
+          </div>
+        </sc-if>
+
+        <!-- Monthly review card -->
+        <sc-if value="{{ isLastSun }}" hint-placeholder-val="{{ false }}">
+          <div style="background:linear-gradient(135deg,#F093FB 0%,#F5576C 100%); border-radius:18px; padding:22px; color:white;">
+            <div style="font-size:18px; font-weight:800; margin-bottom:6px;">🎯 월간 복습의 날</div>
+            <div style="font-size:13px; opacity:0.88; line-height:1.6; margin-bottom:18px;">이번 달 완료되지 않은 문장을 복습하세요</div>
+            <button onClick="{{ reviewMonthly }}" style="background:rgba(255,255,255,0.18); border:1.5px solid rgba(255,255,255,0.4); color:white; padding:13px; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; width:100%;">월간 복습 시작하기 →</button>
+          </div>
+        </sc-if>
+
+        <!-- Today's sentences card -->
+        <sc-if value="{{ hasTodayS }}" hint-placeholder-val="{{ false }}">
+          <div style="background:white; border-radius:18px; padding:20px; box-shadow:0 2px 14px rgba(79,70,229,0.08);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+              <div>
+                <div style="font-size:16px; font-weight:800; color:#1E1B4B;">오늘의 문장</div>
+                <div style="font-size:12px; color:#6B7280; margin-top:3px;">{{ todayDone }} / {{ todayTotal }}개 완료</div>
+              </div>
+              <button onClick="{{ studyToday }}" style="background:#4F46E5; color:white; border:none; padding:10px 18px; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer;">학습 시작</button>
+            </div>
+            <div style="background:#F3F4F6; border-radius:6px; height:6px; overflow:hidden; margin-bottom:16px;">
+              <div style="background:#10B981; height:100%; width:{{ todayPct }}%; border-radius:6px; transition:width 0.5s;"></div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <sc-for list="{{ todaySentences }}" as="s" hint-placeholder-count="5">
+                <div style="display:flex; align-items:center; gap:10px; padding:9px 10px; background:{{ s.rowBg }}; border-radius:10px;">
+                  <div style="width:26px; height:26px; border-radius:8px; background:{{ s.dotBg }}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <span style="font-size:11px; font-weight:800; color:{{ s.dotClr }};">{{ s.num }}</span>
+                  </div>
+                  <div style="font-size:13px; color:#374151; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.korean }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- Empty state -->
+        <sc-if value="{{ noTodayS }}" hint-placeholder-val="{{ false }}">
+          <div style="background:white; border-radius:18px; padding:44px 24px; text-align:center; box-shadow:0 2px 14px rgba(79,70,229,0.08);">
+            <div style="font-size:56px; margin-bottom:18px;">✏️</div>
+            <div style="font-size:20px; font-weight:800; color:#1E1B4B; margin-bottom:8px;">오늘의 문장을 입력하세요</div>
+            <div style="font-size:14px; color:#6B7280; line-height:1.7; margin-bottom:28px;">10개의 한국어 문장을 입력하면<br>자동으로 영어로 번역해드립니다</div>
+            <button onClick="{{ openInput }}" style="background:#4F46E5; color:white; border:none; padding:16px; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer; width:100%;">+ 문장 입력하기</button>
+          </div>
+        </sc-if>
+
+      </div>
+    </sc-if>
+
+    <!-- CALENDAR TAB -->
+    <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px;">
+        <div style="background:white; border-radius:18px; overflow:hidden; box-shadow:0 2px 14px rgba(79,70,229,0.08);">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #F3F4F6;">
+            <button onClick="{{ prevMonth }}" style="background:#F3F4F6; border:none; width:36px; height:36px; border-radius:10px; font-size:18px; cursor:pointer; color:#374151; display:flex; align-items:center; justify-content:center;">‹</button>
+            <div style="font-size:16px; font-weight:800; color:#1E1B4B;">{{ calTitle }}</div>
+            <button onClick="{{ nextMonth }}" style="background:#F3F4F6; border:none; width:36px; height:36px; border-radius:10px; font-size:18px; cursor:pointer; color:#374151; display:flex; align-items:center; justify-content:center;">›</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(7,1fr); padding:10px 10px 4px; gap:0;">
+            <div style="text-align:center; font-size:11px; font-weight:700; color:#EF4444; padding:4px 0;">일</div>
+            <div style="text-align:center; font-size:11px; font-weight:700; color:#6B7280; padding:4px 0;">월</div>
+            <div style="text-align:center; font-size:11px; font-weight:700; color:#6B7280; padding:4px 0;">화</div>
+            <div style="text-align:center; font-size:11px; font-weight:700; color:#6B7280; padding:4px 0;">수</div>
+            <div style="text-align:center; font-size:11px; font-weight:700; color:#6B7280; padding:4px 0;">목</div>
+            <div style="text-align:center; font-size:11px; font-weight:700; color:#6B7280; padding:4px 0;">금</div>
+            <div style="text-align:center; font-size:11px; font-weight:700; color:#3B82F6; padding:4px 0;">토</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(7,1fr); padding:0 10px 10px; gap:2px;">
+            <sc-for list="{{ calCells }}" as="cell" hint-placeholder-count="35">
+              <sc-if value="{{ cell.isDay }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ cell.onClick }}" style="padding:2px; cursor:{{ cell.cursor }};">
+                  <div style="border-radius:10px; background:{{ cell.bg }}; border:{{ cell.border }}; text-align:center; min-height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+                    <div style="font-size:13px; font-weight:500; color:{{ cell.tc }};">{{ cell.day }}</div>
+                    <sc-if value="{{ cell.showDot }}" hint-placeholder-val="{{ false }}">
+                      <div style="width:5px; height:5px; border-radius:50%; background:{{ cell.dot }};"></div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ cell.isEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:2px; min-height:44px;"></div>
+              </sc-if>
+            </sc-for>
+          </div>
+          <div style="padding:10px 20px 16px; border-top:1px solid #F9FAFB;">
+            <div style="display:flex; gap:14px; font-size:11px; color:#9CA3AF;">
+              <div style="display:flex; align-items:center; gap:4px;"><div style="width:7px; height:7px; border-radius:50%; background:#10B981;"></div>모두 완료</div>
+              <div style="display:flex; align-items:center; gap:4px;"><div style="width:7px; height:7px; border-radius:50%; background:#F59E0B;"></div>일부 완료</div>
+              <div style="display:flex; align-items:center; gap:4px;"><div style="width:7px; height:7px; border-radius:50%; background:#EF4444;"></div>미완료</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- STATS TAB -->
+    <sc-if value="{{ isStats }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+          <div style="background:white; border-radius:14px; padding:16px 10px; text-align:center; box-shadow:0 2px 8px rgba(79,70,229,0.07);">
+            <div style="font-size:28px; font-weight:900; color:#4F46E5;">{{ totalDays }}</div>
+            <div style="font-size:11px; color:#9CA3AF; margin-top:2px; font-weight:500;">학습일</div>
+          </div>
+          <div style="background:white; border-radius:14px; padding:16px 10px; text-align:center; box-shadow:0 2px 8px rgba(79,70,229,0.07);">
+            <div style="font-size:28px; font-weight:900; color:#10B981;">{{ totalDone }}</div>
+            <div style="font-size:11px; color:#9CA3AF; margin-top:2px; font-weight:500;">완료 문장</div>
+          </div>
+          <div style="background:white; border-radius:14px; padding:16px 10px; text-align:center; box-shadow:0 2px 8px rgba(79,70,229,0.07);">
+            <div style="font-size:28px; font-weight:900; color:#F59E0B;">{{ streak }}</div>
+            <div style="font-size:11px; color:#9CA3AF; margin-top:2px; font-weight:500;">연속 학습</div>
+          </div>
+        </div>
+
+        <div style="background:white; border-radius:18px; padding:20px; box-shadow:0 2px 14px rgba(79,70,229,0.08);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+            <div style="font-size:15px; font-weight:800; color:#1E1B4B;">완료율 현황</div>
+            <div style="display:flex; background:#F3F4F6; border-radius:8px; padding:2px; gap:2px;">
+              <button onClick="{{ setWeek }}" style="padding:6px 12px; border-radius:6px; border:none; font-size:12px; font-weight:700; cursor:pointer; background:{{ statsWeekBg }}; color:{{ statsWeekClr }}; transition:all 0.2s;">7일</button>
+              <button onClick="{{ setMonth }}" style="padding:6px 12px; border-radius:6px; border:none; font-size:12px; font-weight:700; cursor:pointer; background:{{ statsMonthBg }}; color:{{ statsMonthClr }}; transition:all 0.2s;">30일</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:3px; align-items:flex-end; height:110px; border-bottom:1px solid #F3F4F6; padding-bottom:4px;">
+            <sc-for list="{{ statsD }}" as="bar" hint-placeholder-count="7">
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:2px;">
+                <div style="font-size:8px; color:#9CA3AF; height:12px; line-height:12px;">{{ bar.pctLbl }}</div>
+                <div style="width:76%; background:{{ bar.barColor }}; border-radius:4px 4px 0 0; height:{{ bar.barH }}px; min-height:{{ bar.minH }}px; transition:height 0.5s ease;"></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex; gap:3px; margin-top:6px;">
+            <sc-for list="{{ statsD }}" as="bar" hint-placeholder-count="7">
+              <div style="flex:1; text-align:center; font-size:10px; font-weight:{{ bar.dayWeight }}; color:{{ bar.dayColor }};">{{ bar.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:white; border-radius:18px; padding:20px; box-shadow:0 2px 14px rgba(79,70,229,0.08);">
+          <div style="font-size:15px; font-weight:800; color:#1E1B4B; margin-bottom:14px;">학습 기록</div>
+          <sc-for list="{{ recentDays }}" as="rd" hint-placeholder-count="5">
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #F9FAFB;">
+              <div style="font-size:13px; color:#6B7280; font-weight:500; width:80px; flex-shrink:0;">{{ rd.label }}</div>
+              <div style="flex:1; background:#F3F4F6; border-radius:4px; height:8px; overflow:hidden;">
+                <div style="background:{{ rd.barClr }}; height:100%; width:{{ rd.pct }}%; border-radius:4px; transition:width 0.5s;"></div>
+              </div>
+              <div style="font-size:12px; color:#374151; font-weight:600; width:50px; text-align:right; flex-shrink:0;">{{ rd.label2 }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <!-- BOTTOM NAVIGATION -->
+  <div style="position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:white; border-top:1px solid #E5E7EB; display:flex; z-index:20; padding-bottom:env(safe-area-inset-bottom,0px);">
+    <button onClick="{{ goToday }}" style="flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 0 8px; background:none; border:none; cursor:pointer; gap:2px;">
+      <span style="font-size:22px;">🏠</span>
+      <span style="font-size:11px; font-weight:700; color:{{ tabTodayClr }};">오늘</span>
+    </button>
+    <button onClick="{{ goCalendar }}" style="flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 0 8px; background:none; border:none; cursor:pointer; gap:2px;">
+      <span style="font-size:22px;">📅</span>
+      <span style="font-size:11px; font-weight:700; color:{{ tabCalClr }};">달력</span>
+    </button>
+    <button onClick="{{ goStats }}" style="flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 0 8px; background:none; border:none; cursor:pointer; gap:2px;">
+      <span style="font-size:22px;">📊</span>
+      <span style="font-size:11px; font-weight:700; color:{{ tabStatsClr }};">통계</span>
+    </button>
+  </div>
+
+  <!-- TOAST -->
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; bottom:92px; left:50%; transform:translateX(-50%); background:rgba(30,27,75,0.92); color:white; padding:11px 20px; border-radius:24px; font-size:13px; font-weight:500; white-space:nowrap; z-index:100; box-shadow:0 4px 20px rgba(0,0,0,0.25); animation:fadeUp 0.3s ease; max-width:340px; text-align:center;">{{ toast }}</div>
+  </sc-if>
+
+  <!-- ======== INPUT OVERLAY ======== -->
+  <sc-if value="{{ showInput }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; max-width:430px; left:50%; transform:translateX(-50%); background:#F5F3FF; z-index:50; display:flex; flex-direction:column; animation:fadeUp 0.2s ease;">
+      <div style="background:white; padding:14px 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #E5E7EB; flex-shrink:0;">
+        <button onClick="{{ closeInput }}" style="width:36px; height:36px; border-radius:10px; background:#F3F4F6; border:none; font-size:18px; cursor:pointer; color:#374151; display:flex; align-items:center; justify-content:center;">✕</button>
+        <div style="font-size:17px; font-weight:800; color:#1E1B4B;">오늘의 문장 입력</div>
+      </div>
+      <div style="flex:1; overflow-y:auto; padding:16px;">
+
+        <sc-if value="{{ notTranslated }}" hint-placeholder-val="{{ true }}">
+          <div style="background:white; border-radius:16px; padding:20px; box-shadow:0 2px 10px rgba(79,70,229,0.07);">
+            <div style="font-size:14px; font-weight:700; color:#374151; margin-bottom:4px;">한국어 문장 입력</div>
+            <div style="font-size:12px; color:#9CA3AF; margin-bottom:12px;">한 줄에 하나씩, 최대 10개 입력해주세요</div>
+            <textarea value="{{ koreanText }}" onChange="{{ onKoreanInput }}" placeholder="오늘 날씨가 정말 좋다&#10;나는 영어를 매일 공부한다&#10;커피 한 잔 마실까요?" style="width:100%; height:200px; border:1.5px solid #E5E7EB; border-radius:12px; padding:14px; font-size:14px; font-family:'Noto Sans KR',sans-serif; resize:none; outline:none; color:#1F2937; line-height:1.7; background:#FAFAFA;"></textarea>
+            <sc-if value="{{ hasInputError }}" hint-placeholder-val="{{ false }}">
+              <div style="color:#EF4444; font-size:12px; margin-top:8px; padding:8px 12px; background:#FEF2F2; border-radius:8px;">{{ inputError }}</div>
+            </sc-if>
+            <button onClick="{{ doTranslate }}" style="background:{{ translateBtnBg }}; color:white; border:none; padding:15px; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; width:100%; margin-top:12px; transition:background 0.2s;">{{ translateBtnText }}</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasTranslated }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding:0 2px;">
+              <div style="font-size:14px; font-weight:800; color:#1E1B4B;">번역 결과 확인</div>
+              <button onClick="{{ resetInput }}" style="font-size:12px; color:#6B7280; background:none; border:1px solid #E5E7EB; padding:6px 12px; border-radius:8px; cursor:pointer;">다시 입력</button>
+            </div>
+            <sc-for list="{{ pairs }}" as="pair" hint-placeholder-count="10">
+              <div style="background:white; border-radius:14px; padding:14px 16px; margin-bottom:8px; box-shadow:0 1px 6px rgba(79,70,229,0.06);">
+                <div style="display:flex; align-items:flex-start; gap:10px;">
+                  <div style="width:26px; height:26px; background:#EEF2FF; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
+                    <span style="font-size:11px; font-weight:800; color:#4F46E5;">{{ pair.num }}</span>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="font-size:14px; color:#1E1B4B; font-weight:600; margin-bottom:8px; line-height:1.4;">{{ pair.korean }}</div>
+                    <input value="{{ pair.english }}" onChange="{{ pair.onChange }}" style="width:100%; border:1.5px solid #E5E7EB; border-radius:8px; padding:9px 12px; font-size:13px; color:#374151; outline:none; background:#FAFAFA; font-family:'Noto Sans KR',sans-serif;" placeholder="English translation...">
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ hasInputError }}" hint-placeholder-val="{{ false }}">
+              <div style="color:#EF4444; font-size:12px; margin-bottom:10px; padding:8px 12px; background:#FEF2F2; border-radius:8px;">{{ inputError }}</div>
+            </sc-if>
+            <button onClick="{{ doSave }}" style="background:#10B981; color:white; border:none; padding:16px; border-radius:14px; font-size:16px; font-weight:800; cursor:pointer; width:100%; margin-top:4px;">저장하고 학습 시작 →</button>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ======== STUDY OVERLAY ======== -->
+  <sc-if value="{{ showStudy }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; max-width:430px; left:50%; transform:translateX(-50%); background:#0F172A; z-index:50; display:flex; flex-direction:column; animation:fadeUp 0.2s ease;">
+
+      <!-- Study header -->
+      <div style="padding:16px 20px 10px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+        <button onClick="{{ endStudy }}" style="background:rgba(255,255,255,0.1); border:none; color:rgba(255,255,255,0.8); padding:8px 14px; border-radius:20px; font-size:13px; cursor:pointer; font-weight:600;">← 나가기</button>
+        <div style="color:rgba(255,255,255,0.45); font-size:12px; font-weight:500; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center;">{{ studyTitle }}</div>
+        <div style="background:rgba(255,255,255,0.1); color:white; padding:7px 14px; border-radius:20px; font-size:13px; font-weight:700; white-space:nowrap;">{{ studyProg }}</div>
+      </div>
+
+      <!-- Sentence dots -->
+      <div style="padding:8px 16px 0; display:flex; flex-wrap:wrap; gap:6px; justify-content:center; flex-shrink:0;">
+        <sc-for list="{{ dots }}" as="dot" hint-placeholder-count="10">
+          <button onClick="{{ dot.onClick }}" style="width:34px; height:34px; border-radius:10px; border:1.5px solid {{ dot.bdr }}; background:{{ dot.bg }}; color:{{ dot.clr }}; font-size:12px; font-weight:700; cursor:pointer; transition:all 0.15s;">{{ dot.num }}</button>
+        </sc-for>
+      </div>
+
+      <!-- Main content area -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px 28px; text-align:center; overflow:hidden;">
+
+        <!-- Korean sentence -->
+        <div style="font-size:{{ korFontSize }}px; font-weight:700; color:white; line-height:1.5; animation:fadeUp 0.4s ease; margin-bottom:20px; text-shadow:0 2px 20px rgba(0,0,0,0.5);">{{ curS.korean }}</div>
+
+        <!-- Speaking indicator -->
+        <sc-if value="{{ speakingKorean }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:4px; align-items:center; margin-bottom:20px; height:32px;">
+            <div style="width:3px; height:14px; background:#818CF8; border-radius:2px; animation:pulse 0.7s infinite;"></div>
+            <div style="width:3px; height:22px; background:#818CF8; border-radius:2px; animation:pulse 0.7s 0.15s infinite;"></div>
+            <div style="width:3px; height:30px; background:#818CF8; border-radius:2px; animation:pulse 0.7s 0.3s infinite;"></div>
+            <div style="width:3px; height:22px; background:#818CF8; border-radius:2px; animation:pulse 0.7s 0.45s infinite;"></div>
+            <div style="width:3px; height:14px; background:#818CF8; border-radius:2px; animation:pulse 0.7s 0.6s infinite;"></div>
+          </div>
+        </sc-if>
+
+        <!-- English sentence (revealed) -->
+        <sc-if value="{{ showEnglish }}" hint-placeholder-val="{{ false }}">
+          <div style="width:100%; border-top:1px solid rgba(255,255,255,0.1); padding-top:22px; animation:fadeUp 0.4s ease;">
+            <div style="font-size:20px; color:#A5B4FC; line-height:1.6; font-weight:500;">{{ curS.english }}</div>
+          </div>
+        </sc-if>
+
+        <!-- Reveal button -->
+        <sc-if value="{{ showRevealBtn }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ showEng }}" style="margin-top:28px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.65); padding:13px 32px; border-radius:14px; font-size:14px; font-weight:600; cursor:pointer;">영어 보기</button>
+        </sc-if>
+
+      </div>
+
+      <!-- Bottom controls -->
+      <div style="padding:16px 20px 20px; flex-shrink:0;">
+        <button onClick="{{ onToggleComplete }}" style="width:100%; padding:13px; border-radius:14px; border:1.5px solid {{ completeBtnBdr }}; background:{{ completeBtnBg }}; color:{{ completeBtnClr }}; font-size:14px; font-weight:700; cursor:pointer; margin-bottom:10px; transition:all 0.2s;">{{ completeBtnTxt }}</button>
+        <div style="display:flex; gap:10px;">
+          <button onClick="{{ prevS }}" style="flex:1; padding:14px; border-radius:14px; background:rgba(255,255,255,0.07); border:none; color:{{ prevBtnClr }}; font-size:22px; cursor:pointer; transition:opacity 0.2s;">‹</button>
+          <button onClick="{{ playBtnAction }}" style="flex:2; padding:14px; border-radius:14px; background:{{ playBtnBg }}; border:none; color:white; font-size:14px; font-weight:800; cursor:pointer; transition:background 0.2s;">{{ playBtnTxt }}</button>
+          <button onClick="{{ nextS }}" style="flex:1; padding:14px; border-radius:14px; background:rgba(255,255,255,0.07); border:none; color:{{ nextBtnClr }}; font-size:22px; cursor:pointer; transition:opacity 0.2s;">›</button>
+        </div>
+      </div>
+
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 390, &quot;height&quot;: 844}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'today',
+    data: {},
+    today: '',
+    showInput: false,
+    showStudy: false,
+    koreanText: '',
+    translating: false,
+    translatedPairs: null,
+    inputError: '',
+    studySentences: [],
+    studyIndex: 0,
+    showEnglish: false,
+    studyTitle: '',
+    studyDate: null,
+    speakingKorean: false,
+    autoPlaying: false,
+    calYear: new Date().getFullYear(),
+    calMonth: new Date().getMonth(),
+    statsPeriod: 'week',
+    toast: '',
+  };
+
+  /* ── Utilities ── */
+  getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  fmtDate(s) {
+    const [y,m,d] = s.split('-');
+    return `${y}년 ${+m}월 ${+d}일`;
+  }
+
+  loadData() {
+    try { return JSON.parse(localStorage.getItem('eng_learn_v1') || '{}'); }
+    catch { return {}; }
+  }
+
+  saveData(data) {
+    localStorage.setItem('eng_learn_v1', JSON.stringify(data));
+  }
+
+  isSat(d) { return d.getDay() === 6; }
+
+  isLastSun(d) {
+    if (d.getDay() !== 0) return false;
+    const n = new Date(d);
+    n.setDate(d.getDate() + 7);
+    return n.getMonth() !== d.getMonth();
+  }
+
+  showToast(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => this.setState({ toast: '' }), 3500);
+  }
+
+  /* ── Lifecycle ── */
+  componentDidMount() {
+    const data = this.loadData();
+    const today = this.getTodayStr();
+    this.setState({ data, today });
+    const now = new Date();
+    if (this.isLastSun(now)) {
+      setTimeout(() => this.showToast('🗓 월말 복습의 날! 미완료 문장을 복습하세요'), 700);
+    } else if (this.isSat(now)) {
+      setTimeout(() => this.showToast('📚 토요일 주간 복습의 날입니다!'), 700);
+    }
+  }
+
+  /* ── Translation ── */
+  async translate() {
+    const lines = this.state.koreanText.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 10);
+    if (!lines.length) { this.setState({ inputError: '문장을 입력해주세요.' }); return; }
+    this.setState({ translating: true, inputError: '' });
+
+    if (!window.claude) {
+      this.setState({
+        translatedPairs: lines.map(l => ({ korean: l, english: '' })),
+        translating: false,
+        inputError: '자동 번역을 사용할 수 없어요. 영어를 직접 입력해주세요.'
+      });
+      return;
+    }
+
+    try {
+      const prompt = `Translate the following Korean sentences into natural English expressions.\nRespond ONLY with a JSON array, no other text: [{"korean":"...","english":"..."}]\n\n${lines.map((l,i) => `${i+1}. ${l}`).join('\n')}`;
+      const res = await window.claude.complete(prompt, { maxTokens: 1200 });
+      let pairs;
+      const arrMatch = res.match(/\[[\s\S]*\]/);
+      if (arrMatch) {
+        pairs = JSON.parse(arrMatch[0]);
+      } else {
+        const codeMatch = res.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeMatch) pairs = JSON.parse(codeMatch[1]);
+        else throw new Error('no json');
+      }
+      this.setState({ translatedPairs: pairs, translating: false });
+    } catch (e) {
+      this.setState({
+        translatedPairs: lines.map(l => ({ korean: l, english: '' })),
+        translating: false,
+        inputError: '번역 오류. 영어를 직접 입력해주세요.'
+      });
+    }
+  }
+
+  updateEnglish(i, v) {
+    const p = [...this.state.translatedPairs];
+    p[i] = { ...p[i], english: v };
+    this.setState({ translatedPairs: p });
+  }
+
+  saveSentencesAndStudy() {
+    const { translatedPairs: tp, data, today } = this.state;
+    if (!tp) return;
+    if (tp.some(p => !p.english.trim())) {
+      this.setState({ inputError: '모든 영어 번역을 입력해주세요.' });
+      return;
+    }
+    const sentences = tp.map((p, i) => ({ id: i, korean: p.korean, english: p.english, completed: false }));
+    const newData = { ...data, [today]: { date: today, sentences } };
+    this.saveData(newData);
+    this.setState({ data: newData, showInput: false, koreanText: '', translatedPairs: null });
+    this.startStudy(sentences, today, '오늘의 학습');
+  }
+
+  /* ── Study Session ── */
+  startStudy(sentences, dateKey, title) {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    this.setState({
+      showStudy: true, studySentences: sentences, studyIndex: 0,
+      showEnglish: false, studyTitle: title || '', studyDate: dateKey,
+      speakingKorean: false, autoPlaying: false
+    });
+  }
+
+  endStudy() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    this.setState({ showStudy: false, autoPlaying: false, speakingKorean: false });
+  }
+
+  speak(text, lang) {
+    return new Promise(resolve => {
+      if (!window.speechSynthesis) { resolve(); return; }
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      u.rate = 0.85;
+      u.pitch = 1;
+      u.onend = resolve;
+      u.onerror = resolve;
+      window.speechSynthesis.speak(u);
+    });
+  }
+
+  async playCurrent() {
+    const { studySentences, studyIndex } = this.state;
+    const s = studySentences[studyIndex];
+    if (!s) return;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    this.setState({ showEnglish: false, speakingKorean: true, autoPlaying: true });
+    await this.speak(s.korean, 'ko-KR');
+    if (!this.state.autoPlaying) return;
+    // 2초 대기
+    await new Promise(r => setTimeout(r, 2000));
+    if (!this.state.autoPlaying) return;
+    this.setState({ showEnglish: true, speakingKorean: false });
+    await this.speak(s.english, 'en-US');
+    if (this.state.autoPlaying) {
+      this.setState({ autoPlaying: false });
+    }
+  }
+
+  stopAudio() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    this.setState({ autoPlaying: false, speakingKorean: false });
+  }
+
+  goToSentence(i) {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    this.setState({ studyIndex: i, showEnglish: false, autoPlaying: false, speakingKorean: false });
+  }
+
+  nextSentence() {
+    const { studyIndex, studySentences } = this.state;
+    if (studyIndex < studySentences.length - 1) this.goToSentence(studyIndex + 1);
+  }
+
+  prevSentence() {
+    const { studyIndex } = this.state;
+    if (studyIndex > 0) this.goToSentence(studyIndex - 1);
+  }
+
+  toggleComplete(idx) {
+    const { studyDate, data, studySentences } = this.state;
+    const s = studySentences[idx];
+    const dateKey = studyDate || (s && s.fromDate);
+    if (!dateKey || !data[dateKey]) return;
+
+    const newData = JSON.parse(JSON.stringify(data));
+    const sents = newData[dateKey].sentences;
+    const di = sents.findIndex(x => x.korean === s.korean);
+    if (di < 0) return;
+
+    sents[di].completed = !sents[di].completed;
+    this.saveData(newData);
+
+    const newStudy = [...studySentences];
+    newStudy[idx] = { ...newStudy[idx], completed: sents[di].completed };
+    this.setState({ data: newData, studySentences: newStudy });
+
+    this.showToast(sents[di].completed ? '✅ 완료 표시했습니다!' : '↩️ 완료를 취소했습니다');
+  }
+
+  /* ── Reviews ── */
+  startPrevDayReview() {
+    const { data, today } = this.state;
+    const sents = [];
+    for (const d of Object.keys(data).filter(x => x < today).sort()) {
+      if (data[d] && data[d].sentences) {
+        sents.push(...data[d].sentences.filter(s => !s.completed).map(s => ({ ...s, fromDate: d })));
+      }
+    }
+    if (!sents.length) { this.showToast('미완료 문장이 없습니다! 모두 완료했어요 🎉'); return; }
+    this.startStudy(sents, null, `이전 미완료 복습 (${sents.length}개)`);
+  }
+
+  startWeeklyReview() {
+    const { data } = this.state;
+    const today = new Date();
+    const day = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+
+    const sents = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if (data[ds] && data[ds].sentences) {
+        sents.push(...data[ds].sentences.map(s => ({ ...s, fromDate: ds })));
+      }
+    }
+    if (!sents.length) { this.showToast('이번 주 학습 문장이 없습니다.'); return; }
+    this.startStudy(sents, null, `주간 복습 (${sents.length}개)`);
+  }
+
+  startMonthlyReview() {
+    const { data, today } = this.state;
+    const [y, m] = today.split('-').map(Number);
+    const sents = [];
+    for (const ds of Object.keys(data)) {
+      const [dy, dm] = ds.split('-').map(Number);
+      if (dy === y && dm === m) {
+        sents.push(...data[ds].sentences.filter(s => !s.completed).map(s => ({ ...s, fromDate: ds })));
+      }
+    }
+    if (!sents.length) { this.showToast('이번 달 미완료 문장이 없습니다! 🎉'); return; }
+    this.startStudy(sents, null, `월간 미완료 복습 (${sents.length}개)`);
+  }
+
+  /* ── Calendar ── */
+  prevMonth() {
+    let { calYear, calMonth } = this.state;
+    calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+    this.setState({ calYear, calMonth });
+  }
+
+  nextMonth() {
+    let { calYear, calMonth } = this.state;
+    calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+    this.setState({ calYear, calMonth });
+  }
+
+  getCalCells() {
+    const { calYear, calMonth, data, today } = this.state;
+    const first = new Date(calYear, calMonth, 1).getDay();
+    const dims = new Date(calYear, calMonth + 1, 0).getDate();
+    const cells = [];
+    const empty = { isEmpty: true, isDay: false, day: '', bg: 'transparent', border: 'none', tc: '', showDot: false, dot: '', cursor: 'default', onClick: () => {} };
+
+    for (let i = 0; i < first; i++) cells.push({ ...empty });
+
+    for (let d = 1; d <= dims; d++) {
+      const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dd = data[ds];
+      const total = dd ? dd.sentences.length : 0;
+      const done = dd ? dd.sentences.filter(s => s.completed).length : 0;
+      const pct = total > 0 ? done / total : -1;
+      const isT = ds === today;
+
+      let bg = 'transparent', border = '1.5px solid transparent', tc = '#374151', dot = null;
+      if (isT) { bg = '#EEF2FF'; border = '2px solid #818CF8'; tc = '#4F46E5'; }
+      if (pct === 1) { bg = '#ECFDF5'; border = '1.5px solid #A7F3D0'; dot = '#10B981'; if(isT) border='2px solid #818CF8'; }
+      else if (pct > 0) { bg = '#FFFBEB'; border = '1.5px solid #FDE68A'; dot = '#F59E0B'; if(isT) border='2px solid #818CF8'; }
+      else if (pct === 0 && total > 0) { bg = '#FEF2F2'; border = '1.5px solid #FECACA'; dot = '#EF4444'; if(isT) border='2px solid #818CF8'; }
+
+      cells.push({
+        isEmpty: false, isDay: true, day: d, dateStr: ds, isToday: isT,
+        total, done, hasSentences: total > 0, bg, border, tc,
+        dot: dot || (isT ? '#818CF8' : ''),
+        showDot: !!dot || (isT && total > 0),
+        onClick: total > 0 ? () => this.startStudy(dd.sentences, ds, this.fmtDate(ds)) : () => {},
+        cursor: total > 0 ? 'pointer' : 'default'
+      });
+    }
+    while (cells.length % 7 !== 0) cells.push({ ...empty });
+    return cells;
+  }
+
+  /* ── Stats ── */
+  getStatsData(period) {
+    const { data, today } = this.state;
+    const n = period === 'week' ? 7 : 30;
+    const days = ['일','월','화','수','목','금','토'];
+    const rows = [];
+    for (let i = n-1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const dd = data[ds];
+      const total = dd ? dd.sentences.length : 0;
+      const done = dd ? dd.sentences.filter(s => s.completed).length : 0;
+      const pct = total > 0 ? Math.round(done/total*100) : 0;
+      rows.push({ ds, total, done, pct, isToday: ds === today, hasData: total > 0,
+        label: period === 'week' ? days[d.getDay()] : `${d.getMonth()+1}/${d.getDate()}` });
+    }
+    const maxPct = Math.max(...rows.map(r => r.pct), 1);
+    return rows.map(r => ({
+      ...r,
+      barH: r.total > 0 ? Math.max(4, Math.round(r.pct/maxPct*96)) : 0,
+      minH: r.total > 0 ? 4 : 0,
+      barColor: r.pct >= 80 ? '#10B981' : r.pct >= 40 ? '#4F46E5' : r.pct > 0 ? '#F59E0B' : (r.total > 0 ? '#FCA5A5' : '#E5E7EB'),
+      pctLbl: r.total > 0 ? `${r.pct}%` : '',
+      dayColor: r.isToday ? '#4F46E5' : '#9CA3AF',
+      dayWeight: r.isToday ? '700' : '400',
+    }));
+  }
+
+  getStreak() {
+    const { data, today } = this.state;
+    let count = 0;
+    const d = new Date(today);
+    while (true) {
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if (data[ds] && data[ds].sentences && data[ds].sentences.length > 0) {
+        count++;
+        d.setDate(d.getDate() - 1);
+      } else { break; }
+    }
+    return count;
+  }
+
+  getRecentDays() {
+    const { data, today } = this.state;
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const days = ['일','월','화','수','목','금','토'];
+      const dd = data[ds];
+      const total = dd ? dd.sentences.length : 0;
+      const done = dd ? dd.sentences.filter(s => s.completed).length : 0;
+      const pct = total > 0 ? Math.round(done/total*100) : 0;
+      if (total > 0) {
+        result.push({
+          label: `${d.getMonth()+1}/${d.getDate()} (${days[d.getDay()]})`,
+          label2: `${done}/${total}`,
+          pct,
+          barClr: pct >= 80 ? '#10B981' : pct >= 40 ? '#4F46E5' : '#F59E0B'
+        });
+      }
+    }
+    return result;
+  }
+
+  /* ── renderVals ── */
+  renderVals() {
+    const {
+      tab, data, today, toast,
+      showInput, showStudy,
+      koreanText, translating, translatedPairs: rawPairs, inputError,
+      studySentences, studyIndex, showEnglish, studyTitle, studyDate,
+      speakingKorean, autoPlaying,
+      calYear, calMonth, statsPeriod
+    } = this.state;
+
+    const now = new Date();
+    const isSat = this.isSat(now);
+    const isLastSun = this.isLastSun(now);
+    const weekdayNames = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+    const todayFmt = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${weekdayNames[now.getDay()]}`;
+
+    const todayData = data[today] || { sentences: [] };
+    const todayS = todayData.sentences;
+    const todayDone = todayS.filter(s => s.completed).length;
+    const todayTotal = todayS.length;
+    const hasTodayS = todayTotal > 0;
+
+    let prevIncomplete = 0;
+    for (const d of Object.keys(data).filter(x => x < today)) {
+      if (data[d] && data[d].sentences) prevIncomplete += data[d].sentences.filter(s => !s.completed).length;
+    }
+
+    const todaySentences = todayS.map((s, i) => ({
+      ...s, num: i+1,
+      dotBg: s.completed ? '#10B981' : '#EEF2FF',
+      dotClr: s.completed ? 'white' : '#4F46E5',
+      rowBg: s.completed ? '#F0FDF4' : '#F9FAFB'
+    }));
+
+    // Input
+    const hasTranslated = rawPairs !== null;
+    const pairs = rawPairs ? rawPairs.map((p, i) => ({
+      num: i+1, korean: p.korean, english: p.english,
+      onChange: (e) => this.updateEnglish(i, e.target.value)
+    })) : [];
+
+    // Study
+    const curS = studySentences[studyIndex] || { korean: '', english: '', completed: false };
+    const dots = studySentences.map((s, i) => ({
+      num: i+1,
+      onClick: () => this.goToSentence(i),
+      bg: i === studyIndex ? '#4F46E5' : s.completed ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.06)',
+      bdr: i === studyIndex ? '#818CF8' : s.completed ? '#10B981' : 'rgba(255,255,255,0.18)',
+      clr: i === studyIndex ? 'white' : s.completed ? '#6EE7B7' : 'rgba(255,255,255,0.4)',
+    }));
+    const showRevealBtn = !autoPlaying && !showEnglish && !!curS.korean;
+    const korFontSize = curS.korean && curS.korean.length > 20 ? 20 : curS.korean && curS.korean.length > 12 ? 22 : 26;
+
+    // Calendar
+    const calCells = this.getCalCells();
+    const calMonthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const calTitle = `${calYear}년 ${calMonthNames[calMonth]}`;
+
+    // Stats
+    const statsD = this.getStatsData(statsPeriod);
+    const allS = Object.values(data).flatMap(d => d.sentences || []);
+    const totalDays = Object.keys(data).filter(d => data[d].sentences && data[d].sentences.length).length;
+    const totalDone = allS.filter(s => s.completed).length;
+    const streak = this.getStreak();
+    const recentDays = this.getRecentDays();
+
+    return {
+      tab,
+      isToday: tab === 'today',
+      isCalendar: tab === 'calendar',
+      isStats: tab === 'stats',
+      tabTodayClr: tab === 'today' ? '#4F46E5' : '#9CA3AF',
+      tabCalClr: tab === 'calendar' ? '#4F46E5' : '#9CA3AF',
+      tabStatsClr: tab === 'stats' ? '#4F46E5' : '#9CA3AF',
+
+      todayFmt, isSat, isLastSun,
+      isNormal: !isSat && !isLastSun,
+      hasTodayS,
+      noTodayS: !hasTodayS && !isSat && !isLastSun,
+      todayDone, todayTotal,
+      todayPct: todayTotal > 0 ? Math.round(todayDone/todayTotal*100) : 0,
+      todaySentences,
+      hasPrevIncomplete: prevIncomplete > 0,
+      prevIncomplete,
+
+      showInput, showStudy,
+      koreanText, translating,
+      hasTranslated, notTranslated: !hasTranslated,
+      inputError, hasInputError: !!inputError,
+      pairs,
+      translateBtnBg: translating ? '#9CA3AF' : '#4F46E5',
+      translateBtnText: translating ? '번역 중...' : '✨  번역하기',
+
+      studySentences, dots,
+      studyProg: studySentences.length > 0 ? `${studyIndex+1} / ${studySentences.length}` : '',
+      studyTitle,
+      curS, showEnglish, speakingKorean, autoPlaying, showRevealBtn,
+      korFontSize,
+      isFirst: studyIndex === 0,
+      isLast: studyIndex === studySentences.length - 1,
+      prevBtnClr: studyIndex === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)',
+      nextBtnClr: studyIndex === studySentences.length - 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)',
+      completeBtnBg: curS.completed ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.06)',
+      completeBtnBdr: curS.completed ? 'rgba(16,185,129,0.6)' : 'rgba(255,255,255,0.18)',
+      completeBtnClr: curS.completed ? '#6EE7B7' : 'rgba(255,255,255,0.65)',
+      completeBtnTxt: curS.completed ? '✓ 완료됨  (다시 복습)' : '완료 표시하기',
+      playBtnTxt: autoPlaying ? '■  정지' : '🔊  듣기',
+      playBtnBg: autoPlaying ? '#DC2626' : '#4F46E5',
+      playBtnAction: () => this.state.autoPlaying ? this.stopAudio() : this.playCurrent(),
+      onToggleComplete: () => this.toggleComplete(studyIndex),
+
+      calTitle, calCells,
+
+      statsD, statsPeriod,
+      statsWeekBg: statsPeriod === 'week' ? '#4F46E5' : 'transparent',
+      statsWeekClr: statsPeriod === 'week' ? 'white' : '#6B7280',
+      statsMonthBg: statsPeriod === 'month' ? '#4F46E5' : 'transparent',
+      statsMonthClr: statsPeriod === 'month' ? 'white' : '#6B7280',
+      totalDays, totalDone, streak,
+      recentDays,
+
+      toast, hasToast: !!toast,
+
+      goToday: () => this.setState({ tab: 'today' }),
+      goCalendar: () => this.setState({ tab: 'calendar' }),
+      goStats: () => this.setState({ tab: 'stats' }),
+      openInput: () => this.setState({ showInput: true, koreanText: '', translatedPairs: null, inputError: '' }),
+      closeInput: () => this.setState({ showInput: false }),
+      onKoreanInput: (e) => this.setState({ koreanText: e.target.value }),
+      doTranslate: () => this.translate(),
+      resetInput: () => this.setState({ translatedPairs: null, inputError: '' }),
+      doSave: () => this.saveSentencesAndStudy(),
+      studyToday: () => this.startStudy(todayS, today, '오늘의 학습'),
+      reviewPrev: () => this.startPrevDayReview(),
+      reviewWeekly: () => this.startWeeklyReview(),
+      reviewMonthly: () => this.startMonthlyReview(),
+      endStudy: () => this.endStudy(),
+      nextS: () => this.nextSentence(),
+      prevS: () => this.prevSentence(),
+      showEng: () => this.setState({ showEnglish: true }),
+      prevMonth: () => this.prevMonth(),
+      nextMonth: () => this.nextMonth(),
+      setWeek: () => this.setState({ statsPeriod: 'week' }),
+      setMonth: () => this.setState({ statsPeriod: 'month' }),
+    };
+  }
+}
+</script>
+</body>
+</html>
