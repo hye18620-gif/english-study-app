@@ -1,7 +1,7 @@
 /* Offline-first service worker for the English Study App PWA.
    Precaches the app shell so it launches without a network connection.
    Bump CACHE_VERSION whenever the shell files change to invalidate old caches. */
-const CACHE_VERSION = 'eng-study-v2';
+const CACHE_VERSION = 'eng-study-v3';
 const SHELL = [
   './',
   './index.html',
