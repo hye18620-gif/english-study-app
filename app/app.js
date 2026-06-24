@@ -35,6 +35,7 @@
     speakingKorean: false,
     autoPlaying: false,
     autoPlayAll: false,
+    playingEnglish: false,
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
     statsPeriod: 'week',
@@ -221,12 +222,12 @@
     setState({
       showStudy: true, showInput: false, studySentences: sentences, studyIndex: 0,
       showEnglish: false, studyTitle: title || '', studyDate: dateKey,
-      speakingKorean: false, autoPlaying: false, autoPlayAll: false
+      speakingKorean: false, autoPlaying: false, autoPlayAll: false, playingEnglish: false
     });
   }
   function endStudy() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setState({ showStudy: false, autoPlaying: false, autoPlayAll: false, speakingKorean: false });
+    setState({ showStudy: false, autoPlaying: false, autoPlayAll: false, speakingKorean: false, playingEnglish: false });
   }
   function speak(text, lang) {
     return new Promise(function (resolve) {
@@ -242,21 +243,33 @@
     });
   }
   async function playCurrent() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setState({ showEnglish: false, speakingKorean: true, autoPlaying: true });
+    while (state.autoPlaying) {
+      var s = state.studySentences[state.studyIndex];
+      if (!s) break;
+      setState({ showEnglish: false, speakingKorean: true });
+      await speak(s.korean, 'ko-KR');
+      if (!state.autoPlaying) break;
+      await new Promise(function (r) { setTimeout(r, 2000); });
+      if (!state.autoPlaying) break;
+      setState({ showEnglish: true, speakingKorean: false });
+      await speak(s.english, 'en-US');
+      if (!state.autoPlaying) break;
+      await new Promise(function (r) { setTimeout(r, 800); });
+    }
+  }
+  async function playEnglish() {
     var s = state.studySentences[state.studyIndex];
     if (!s) return;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setState({ showEnglish: false, speakingKorean: true, autoPlaying: true });
-    await speak(s.korean, 'ko-KR');
-    if (!state.autoPlaying) return;
-    await new Promise(function (r) { setTimeout(r, 2000); }); // 2초 대기
-    if (!state.autoPlaying) return;
-    setState({ showEnglish: true, speakingKorean: false });
+    setState({ showEnglish: true, speakingKorean: false, playingEnglish: true });
     await speak(s.english, 'en-US');
-    if (state.autoPlaying) setState({ autoPlaying: false });
+    setState({ playingEnglish: false });
   }
   function stopAudio() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setState({ autoPlaying: false, autoPlayAll: false, speakingKorean: false });
+    setState({ autoPlaying: false, autoPlayAll: false, speakingKorean: false, playingEnglish: false });
   }
   async function playAll() {
     var sents = state.studySentences;
@@ -283,7 +296,7 @@
   }
   function goToSentence(i) {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setState({ studyIndex: i, showEnglish: false, autoPlaying: false, speakingKorean: false });
+    setState({ studyIndex: i, showEnglish: false, autoPlaying: false, autoPlayAll: false, speakingKorean: false, playingEnglish: false });
   }
   function nextSentence() {
     if (state.studyIndex < state.studySentences.length - 1) goToSentence(state.studyIndex + 1);
@@ -520,6 +533,7 @@
     toggleComplete: function () { toggleComplete(state.studyIndex); },
     playBtn: function () { (state.autoPlaying || state.autoPlayAll) ? stopAudio() : playCurrent(); },
     playAllBtn: function () { state.autoPlayAll ? stopAudio() : playAll(); },
+    playEngBtn: function () { state.playingEnglish ? stopAudio() : playEnglish(); },
     calCell: function (el) {
       var ds = el.getAttribute('data-date');
       var dd = state.data[ds];
@@ -920,18 +934,21 @@
     var prevBtnClr = idx === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)';
     var nextBtnClr = idx === sents.length - 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)';
     var isPlaying = state.autoPlaying || state.autoPlayAll;
-    var playBtnTxt = isPlaying ? '■  정지' : '🔊  듣기';
+    var playBtnTxt = isPlaying ? '■ 정지' : '🔊 반복';
     var playBtnBg = isPlaying ? '#DC2626' : '#4F46E5';
-    var allBtnTxt = state.autoPlayAll ? '■  중단' : '🔁  자동';
+    var allBtnTxt = state.autoPlayAll ? '■ 중단' : '🔁 자동';
     var allBtnBg = state.autoPlayAll ? '#DC2626' : '#7C3AED';
+    var engBtnTxt = state.playingEnglish ? '■ 정지' : '🔈 영어만';
+    var engBtnBg = state.playingEnglish ? '#DC2626' : '#0F766E';
 
-    h += '<div style="padding:16px 20px 20px; flex-shrink:0; padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));">' +
-      '<button data-action="toggleComplete" style="width:100%; padding:13px; border-radius:14px; border:1.5px solid ' + completeBtnBdr + '; background:' + completeBtnBg + '; color:' + completeBtnClr + '; font-size:14px; font-weight:700; cursor:pointer; margin-bottom:10px; transition:all 0.2s;">' + completeBtnTxt + '</button>' +
-      '<div style="display:flex; gap:8px;">' +
-      '<button data-action="prevS" style="flex:1; padding:14px; border-radius:14px; background:rgba(255,255,255,0.07); border:none; color:' + prevBtnClr + '; font-size:22px; cursor:pointer; transition:opacity 0.2s;">‹</button>' +
-      '<button data-action="playBtn" style="flex:1.5; padding:14px; border-radius:14px; background:' + playBtnBg + '; border:none; color:white; font-size:13px; font-weight:800; cursor:pointer; transition:background 0.2s;">' + playBtnTxt + '</button>' +
-      '<button data-action="playAllBtn" style="flex:1.5; padding:14px; border-radius:14px; background:' + allBtnBg + '; border:none; color:white; font-size:13px; font-weight:800; cursor:pointer; transition:background 0.2s;">' + allBtnTxt + '</button>' +
-      '<button data-action="nextS" style="flex:1; padding:14px; border-radius:14px; background:rgba(255,255,255,0.07); border:none; color:' + nextBtnClr + '; font-size:22px; cursor:pointer; transition:opacity 0.2s;">›</button>' +
+    h += '<div style="padding:12px 16px 16px; flex-shrink:0; padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));">' +
+      '<button data-action="toggleComplete" style="width:100%; padding:12px; border-radius:14px; border:1.5px solid ' + completeBtnBdr + '; background:' + completeBtnBg + '; color:' + completeBtnClr + '; font-size:14px; font-weight:700; cursor:pointer; margin-bottom:8px; transition:all 0.2s;">' + completeBtnTxt + '</button>' +
+      '<div style="display:flex; gap:6px;">' +
+      '<button data-action="prevS" style="flex:1; padding:13px 0; border-radius:12px; background:rgba(255,255,255,0.07); border:none; color:' + prevBtnClr + '; font-size:22px; cursor:pointer;">‹</button>' +
+      '<button data-action="playBtn" style="flex:1.3; padding:13px 0; border-radius:12px; background:' + playBtnBg + '; border:none; color:white; font-size:12px; font-weight:800; cursor:pointer;">' + playBtnTxt + '</button>' +
+      '<button data-action="playAllBtn" style="flex:1.3; padding:13px 0; border-radius:12px; background:' + allBtnBg + '; border:none; color:white; font-size:12px; font-weight:800; cursor:pointer;">' + allBtnTxt + '</button>' +
+      '<button data-action="playEngBtn" style="flex:1.3; padding:13px 0; border-radius:12px; background:' + engBtnBg + '; border:none; color:white; font-size:12px; font-weight:800; cursor:pointer;">' + engBtnTxt + '</button>' +
+      '<button data-action="nextS" style="flex:1; padding:13px 0; border-radius:12px; background:rgba(255,255,255,0.07); border:none; color:' + nextBtnClr + '; font-size:22px; cursor:pointer;">›</button>' +
       '</div></div>';
 
     h += '</div>';
