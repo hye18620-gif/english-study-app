@@ -44,6 +44,25 @@
 
   var toastTimer = null;
   var cachedVoices = [];
+  var wakeLock = null;
+
+  async function acquireWakeLock() {
+    if (!navigator.wakeLock) return;
+    try {
+      if (wakeLock) return;
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', function () { wakeLock = null; });
+    } catch (e) {}
+  }
+  function releaseWakeLock() {
+    if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  }
+  // Re-acquire if screen lock was released when tab regains focus
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && (state.autoPlaying || state.autoPlayAll || state.playingEnglish)) {
+      acquireWakeLock();
+    }
+  });
 
   function pickVoice(lang) {
     var voices = cachedVoices.length ? cachedVoices : (window.speechSynthesis ? window.speechSynthesis.getVoices() || [] : []);
@@ -244,6 +263,7 @@
   }
   async function playCurrent() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    acquireWakeLock();
     setState({ showEnglish: false, speakingKorean: true, autoPlaying: true });
     while (state.autoPlaying) {
       var s = state.studySentences[state.studyIndex];
@@ -263,18 +283,22 @@
     var s = state.studySentences[state.studyIndex];
     if (!s) return;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    acquireWakeLock();
     setState({ showEnglish: true, speakingKorean: false, playingEnglish: true });
     await speak(s.english, 'en-US');
+    releaseWakeLock();
     setState({ playingEnglish: false });
   }
   function stopAudio() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    releaseWakeLock();
     setState({ autoPlaying: false, autoPlayAll: false, speakingKorean: false, playingEnglish: false });
   }
   async function playAll() {
     var sents = state.studySentences;
     if (!sents.length) return;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    acquireWakeLock();
     setState({ autoPlayAll: true, autoPlaying: true, studyIndex: 0, showEnglish: false, speakingKorean: false });
     for (var i = 0; i < sents.length; i++) {
       if (!state.autoPlayAll) break;
@@ -290,6 +314,7 @@
       if (i < sents.length - 1) await new Promise(function (r) { setTimeout(r, 1200); });
     }
     if (state.autoPlayAll) {
+      releaseWakeLock();
       setState({ autoPlayAll: false, autoPlaying: false, speakingKorean: false });
       showToast('✅ 전체 학습 완료!');
     }
